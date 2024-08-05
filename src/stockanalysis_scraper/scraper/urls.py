@@ -1,5 +1,5 @@
 from .enums import Pages, PremarketOptions, AfterHoursOptions, \
-    LosersOptions, ActiveOptions, GainersOptions
+    LosersOptions, ActiveOptions, GainersOptions, News
 
 page_options = {
     Pages.PREMARKET: {
@@ -34,4 +34,7 @@ page_options = {
         GainersOptions.THREE_YEARS: '3y/',
         GainersOptions.FIVE_YEARS: '5y/',
     },
+    News.MARKETS: {},
+    News.ALL_STOCKS: {},
+    News.PRESS_RELEASES: {}
 }

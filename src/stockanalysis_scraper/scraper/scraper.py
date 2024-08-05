@@ -8,9 +8,12 @@ from selenium.webdriver.support.ui import WebDriverWait
 from bs4 import BeautifulSoup
 from .config import get_settings
 from .enums import Pages, PremarketOptions, AfterHoursOptions, ActiveOptions, \
-LosersOptions, GainersOptions
+LosersOptions, GainersOptions, News
 from .urls import page_options
 
+
+settings = get_settings()
+base_url = settings['base_url']
 
 
 class StockAnalysis:
@@ -32,7 +35,7 @@ class StockAnalysis:
     def set_url(self, base_url: str, page: Pages, option=None):
         url = base_url + page.value
         if option and option in page_options.get(page, {}):
-            url += page_options[page][option]
+            url += page_options[page].get(option,'')
         self.url = url
 
     def open_url(self):
@@ -81,7 +84,7 @@ class StockAnalysis:
 
         return result
 
-    def scrape_premarket_gainers(self, base_url: str):
+    def scrape_premarket_gainers(self):
         self.set_url(base_url, Pages.PREMARKET, PremarketOptions.GAINERS)
         self.open_url()
         try:
@@ -94,10 +97,10 @@ class StockAnalysis:
 
 
 
-    def scrape_premarket_losers(self, base_url: str):
+    def scrape_premarket_losers(self):
         raise NotImplementedError("This method needs to be implemented.")
 
-    def scrape_aftermarket_gainers(self, base_url: str):
+    def scrape_aftermarket_gainers(self):
         self.set_url(base_url, Pages.AFTER_HOURS, AfterHoursOptions.GAINERS)
         self.open_url()
         try:
@@ -107,3 +110,43 @@ class StockAnalysis:
             raise Exception('Failed to retrieve the data from table with after hours gainers')
         
         return result
+    
+    def _scrape_news(self, news: News):
+        self.set_url(base_url, news)
+        self.open_url()
+        page_soup = self.parse_page_content()
+
+        # Find all divs with the specified class
+        divs = page_soup.find_all('div', class_='flex flex-col')
+        try:
+            result = []
+            for div in divs:
+                # Extract the headline
+                headline = div.find('h3').text.strip()
+                # Extract the link
+                link = div.find('a')['href']
+                # Extract the description
+                description = div.find('p').text.strip()
+                # Extract the metadata (time and source)
+                metadata = div.find('div', class_='mt-1 text-sm text-faded sm:order-1 sm:mt-0').text.strip()
+                
+                article_data = {
+                    'headline': headline,
+                    'link': link,
+                    'description': description,
+                    'metadata': metadata
+                }
+                result.append(article_data)
+        except:
+            raise Exception('Failed to retrieve market news')
+        
+        return result
+
+    def scrape_market_news(self):
+        return self._scrape_news(News.MARKETS)
+
+    def scrape_all_stocks_news(self):
+        return self._scrape_news(News.ALL_STOCKS)
+    
+    def scrape_press_release_news(self):
+        return self._scrape_news(News.PRESS_RELEASES)

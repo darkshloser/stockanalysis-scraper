@@ -43,3 +43,8 @@ class GainersOptions(Enum):
     THREE_YEARS = '3y/'
     FIVE_YEARS = '5y/'
 
+
+class News(Enum):
+    MARKETS = 'news/'
+    ALL_STOCKS = 'news/all-stocks/'
+    PRESS_RELEASES = 'news/press-releases/'
