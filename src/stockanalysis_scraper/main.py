@@ -9,6 +9,7 @@ def main():
     
     # Scrape Premarket Movers
     movers_data = scraper.scrape_aftermarket_gainers(base_url)
+    print(movers_data)
 
 if __name__ == "__main__":
     main()
