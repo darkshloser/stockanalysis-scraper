@@ -38,6 +38,12 @@ class StockAnalysis:
             url += page_options[page].get(option,'')
         self.url = url
 
+    def set_stock_url(self, stock_symbol: str):
+        """
+        Set the URL to retrieve data for a specific stock based on its symbol.
+        """
+        self.url = f"{base_url}/stocks/{stock_symbol}"
+
     def open_url(self):
         self.driver.get(self.url)
         self.driver.implicitly_wait(10)  # Wait for JavaScript to render
@@ -111,11 +117,7 @@ class StockAnalysis:
         
         return result
     
-    def _scrape_news(self, news: News):
-        self.set_url(base_url, news)
-        self.open_url()
-        page_soup = self.parse_page_content()
-
+    def _scrape_news(self, page_soup):
         # Find all divs with the specified class
         divs = page_soup.find_all('div', class_='flex flex-col')
         try:
@@ -142,11 +144,127 @@ class StockAnalysis:
         
         return result
 
+    def _click_stock_overview_link(self):
+        try:
+            # Click the "Overview" link by locating it using XPath or any other preferred method
+            overview_link = self.driver.find_element(By.XPATH, '//a[@data-title="Overview"]')
+            overview_link.click()
+        except Exception as e:
+            raise Exception(f"Failed to click on the Overview link: {e}")
+
+    def _get_overview_table(self, soup):
+        div_elements = soup.find_all('div')
+
+        # Iterate through each <div> to find the first one that contains exactly two <table> elements
+        for div in div_elements:
+            tables = div.find_all('table')
+            if len(tables) == 2:
+                target_div = div
+                break
+        
+        result = {}
+        try:
+            tables = target_div.find_all('table')
+
+            # Iterate over all rows in the table's tbody
+            for table in tables:
+                for row in table.find_all('tr'):
+                    # Find all td elements in the row
+                    cells = row.find_all('td')
+                    if len(cells) == 2:  # Ensure there are exactly 2 columns
+                        key = cells[0].get_text(strip=True)  # First column as key
+                        value = cells[1].get_text(strip=True)  # Second column as value
+                        result[key] = value  # Store the pair in the dictionary
+        except:
+            return None
+
+        return result
+    
+    def _get_about_data(self, soup):
+        # Find the <div> elements with class 'grid' and that have six child <div> elements
+        grid_divs = soup.find_all('div', class_='grid')
+
+        # Iterate over the grid <div> elements to find the one with exactly six child <div> elements
+        target_div = None
+        for div in grid_divs:
+            child_divs = div.find_all('div', class_='col-span-1')
+            if len(child_divs) == 6:
+                target_div = div
+                break
+
+        result = {}
+        try:
+            for child_div in target_div.find_all('div', class_='col-span-1'):
+                key = child_div.find('span').get_text(strip=True)
+                value_tag = child_div.find('a')
+                if value_tag:
+                    value = value_tag.get_text(strip=True)
+                else:
+                    value = child_div.find_all('span')[-1].get_text(strip=True)
+                result[key] = value
+        except:
+            return None
+
+        return result
+
     def scrape_market_news(self):
-        return self._scrape_news(News.MARKETS)
+        self.set_url(base_url, News.MARKETS)
+        self.open_url()
+        page_soup = self.parse_page_content()
+        return self._scrape_news(page_soup)
 
     def scrape_all_stocks_news(self):
-        return self._scrape_news(News.ALL_STOCKS)
+        self.set_url(base_url, News.ALL_STOCKS)
+        self.open_url()
+        page_soup = self.parse_page_content()
+        return self._scrape_news(page_soup)
     
     def scrape_press_release_news(self):
-        return self._scrape_news(News.PRESS_RELEASES)
+        self.set_url(base_url, News.PRESS_RELEASES)
+        self.open_url()
+        page_soup = self.parse_page_content()
+        return self._scrape_news(page_soup)
+    
+    def scrape_stock_data(self, stock_symbol: str):
+        """
+        Scrape the data for a specific stock identified by its symbol.
+        """
+        # Set the URL for the stock
+        self.set_stock_url(stock_symbol)
+        
+        # Open the stock's page
+        self.open_url()
+        
+        # Parse the page content
+        page_soup = self.parse_page_content()
+        
+        try:
+            # Example: Find the current stock price (you may need to adjust the selectors)
+            stock_price_elem = page_soup.select_one('.text-4xl.font-bold')
+            if not stock_price_elem:
+                raise Exception(f"Failed to retrieve the Price for stock {stock_symbol}")
+            stock_price = stock_price_elem.get_text(strip=True)
+
+            # Overview tab
+            self._click_stock_overview_link()
+
+            # table = page_soup.find('table', {'data-test': 'overview-info'})
+            overview_data = self._get_overview_table(page_soup)
+
+            about_data = self._get_about_data(page_soup)
+
+            news_data = self._scrape_news(page_soup)
+
+        except Exception as e:
+            raise Exception(f"Failed to retrieve data for stock {stock_symbol}: {e}")
+        finally:
+            self.close()
+            result = {
+                'price': stock_price,
+                'overview': overview_data,
+                'about': about_data,
+                'news': news_data
+            }
+        
+        return result
+
