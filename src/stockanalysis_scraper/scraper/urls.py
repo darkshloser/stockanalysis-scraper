@@ -1,21 +1,21 @@
-from .enums import Pages, PremarketOptions, AfterHoursOptions, \
-    LosersOptions, ActiveOptions, GainersOptions, News
+from .enums import MarketMovers, PremarketOptions, AfterHoursOptions, \
+    LosersOptions, ActiveOptions, GainersOptions, News, Stocks
 
 page_options = {
-    Pages.PREMARKET: {
+    MarketMovers.PREMARKET: {
         PremarketOptions.MOVERS: '',
         PremarketOptions.GAINERS: 'gainers/',
         PremarketOptions.LOSERS: 'losers/',
     },
-    Pages.AFTER_HOURS: {
+    MarketMovers.AFTER_HOURS: {
         AfterHoursOptions.MOVERS: '',
         AfterHoursOptions.GAINERS: 'gainers/',
         AfterHoursOptions.LOSERS: 'losers/',
     },
-    Pages.ACTIVE: {
+    MarketMovers.ACTIVE: {
         ActiveOptions.TODAY: '',
     },
-    Pages.LOSERS: {
+    MarketMovers.LOSERS: {
         LosersOptions.TODAY: '',
         LosersOptions.WEEK: 'week/',
         LosersOptions.MONTH: 'month/',
@@ -25,7 +25,7 @@ page_options = {
         LosersOptions.FIVE_YEARS: '5y/',
 
     },
-    Pages.GAINERS: {
+    MarketMovers.GAINERS: {
         GainersOptions.TODAY: '',
         GainersOptions.WEEK: 'week/',
         GainersOptions.MONTH: 'month/',
@@ -36,5 +36,12 @@ page_options = {
     },
     News.MARKETS: {},
     News.ALL_STOCKS: {},
-    News.PRESS_RELEASES: {}
+    News.PRESS_RELEASES: {},
+    Stocks.SCREENER: {},
+    Stocks.EARNINGS: {},
+    Stocks.INDUSTRY: {},
+    Stocks.LIST: {},
+    Stocks.ANALYSTS: {},
+    Stocks.TOP_STOCKS: {},
+    Stocks.ACTIONS: {}
 }

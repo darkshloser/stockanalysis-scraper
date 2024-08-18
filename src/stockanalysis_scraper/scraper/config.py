@@ -1,6 +1,3 @@
-from .enums import Pages, PremarketOptions, \
-    AfterHoursOptions, LosersOptions
-
 import os
 import configparser
 

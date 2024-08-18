@@ -1,6 +1,17 @@
 from enum import Enum
 
-class Pages(Enum):
+
+class Stocks(Enum):
+    SCREENER = 'stocks/screener/'
+    EARNINGS = 'stocks/earnings-calendar/'
+    INDUSTRY = 'stocks/industry/'
+    LIST = 'list/'
+    ANALYSTS = 'analysts/'
+    TOP_STOCKS = 'analysts/top-stocks/'
+    ACTIONS = 'actions/'
+
+
+class MarketMovers(Enum):
     PREMARKET = 'markets/premarket/'
     AFTER_HOURS = 'markets/afterhours/'
     ACTIVE = 'markets/active/'
@@ -48,3 +59,4 @@ class News(Enum):
     MARKETS = 'news/'
     ALL_STOCKS = 'news/all-stocks/'
     PRESS_RELEASES = 'news/press-releases/'
+

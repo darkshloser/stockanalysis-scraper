@@ -1,4 +1,5 @@
 import time
+from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.support import expected_conditions as EC
@@ -7,8 +8,8 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
 from bs4 import BeautifulSoup
 from .config import get_settings
-from .enums import Pages, PremarketOptions, AfterHoursOptions, ActiveOptions, \
-LosersOptions, GainersOptions, News
+from .enums import MarketMovers, PremarketOptions, AfterHoursOptions, ActiveOptions, \
+LosersOptions, GainersOptions, News, Stocks
 from .urls import page_options
 
 
@@ -32,7 +33,7 @@ class StockAnalysis:
         except:
             raise ValueError("Currently only 'Chrome' browser is supported")
 
-    def set_url(self, base_url: str, page: Pages, option=None):
+    def set_url(self, base_url: str, page: MarketMovers, option=None):
         url = base_url + page.value
         if option and option in page_options.get(page, {}):
             url += page_options[page].get(option,'')
@@ -56,10 +57,16 @@ class StockAnalysis:
         self.driver.quit()
 
     def click_button(self, by: By, value: str):
-        button = WebDriverWait(self.driver, 10).until(
-            EC.element_to_be_clickable((by, value))
-        )
-        button.click()
+        try:
+            button = WebDriverWait(self.driver, 10).until(
+                EC.element_to_be_clickable((by, value))
+            )
+            button.click()
+            time.sleep(3)
+            return
+        except:
+            pass
+        raise Exception('Can not click on specified button.')
 
     def get_elements(self, by: By, value: str):
         return self.driver.find_elements(by, value)
@@ -91,7 +98,7 @@ class StockAnalysis:
         return result
 
     def scrape_premarket_gainers(self):
-        self.set_url(base_url, Pages.PREMARKET, PremarketOptions.GAINERS)
+        self.set_url(base_url, MarketMovers.PREMARKET, PremarketOptions.GAINERS)
         self.open_url()
         try:
             result = self._extract_table_rows()
@@ -107,7 +114,7 @@ class StockAnalysis:
         raise NotImplementedError("This method needs to be implemented.")
 
     def scrape_aftermarket_gainers(self):
-        self.set_url(base_url, Pages.AFTER_HOURS, AfterHoursOptions.GAINERS)
+        self.set_url(base_url, MarketMovers.AFTER_HOURS, AfterHoursOptions.GAINERS)
         self.open_url()
         try:
             result = self._extract_table_rows()
@@ -267,4 +274,43 @@ class StockAnalysis:
             }
         
         return result
+    
+    def scrape_earnings(self):
+        self.set_url(base_url, Stocks.EARNINGS)
+        self.open_url()
 
+        # Parse the page content
+        page_soup = self.parse_page_content()
+
+        # get current time in format "Aug 15, 2024"
+        current_date = datetime.now()
+        formatted_date = current_date.strftime("%b %d, %Y")
+
+        # Click on button 'Daily'
+        self.click_button(By.XPATH, "//button[text()='Daily']")
+
+
+        # Select current date 
+        self.click_button(By.XPATH, f"//button[.//div[contains(text(), '{formatted_date}')]]")
+
+        # Parse the page content
+        page_soup = self.parse_page_content()
+
+        try:
+            # Find the table 
+            table = page_soup.find('table')
+    
+            # Extract headers
+            headers = [th.get_text(strip=True) for th in table.find_all('th')]
+
+            # Extract rows
+            rows = []
+            for tr in table.find_all('tr')[1:]:  # Skip the header row
+                cells = tr.find_all('td')
+                row = {headers[i]: cells[i].get_text(strip=True) for i in range(len(cells))}
+                rows.append(row)
+
+        except:
+            raise Exception(f"Can't get Earnings data for that date {formatted_date}")
+
+        return rows

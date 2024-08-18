@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 from selenium.webdriver.common.by import By
 from stockanalysis_scraper.scraper.scraper import StockAnalysis
-from stockanalysis_scraper.scraper.enums import Pages, PremarketOptions
+from stockanalysis_scraper.scraper.enums import MarketMovers, PremarketOptions
 
 class TestStockAnalysis(unittest.TestCase):
 
@@ -22,7 +22,7 @@ class TestStockAnalysis(unittest.TestCase):
         self.base_url = 'https://stockanalysis.com/'
 
     def test_set_url_premarket_gainers(self):
-        self.stock_analysis.set_url(self.base_url, Pages.PREMARKET, PremarketOptions.GAINERS)
+        self.stock_analysis.set_url(self.base_url, MarketMovers.PREMARKET, PremarketOptions.GAINERS)
         expected_url = 'https://stockanalysis.com/markets/premarket/gainers/'
         self.assertEqual(self.stock_analysis.url, expected_url)
 
