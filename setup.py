@@ -2,8 +2,9 @@ from setuptools import setup, find_packages
 
 setup(
     name='stockanalysis_scraper',
-    version='1.0.0',
-    packages=find_packages(),
+    version='1.0.1',
+    packages=find_packages(where='src'),  # Look for packages in the 'src' directory
+    package_dir={'': 'src'},  # Specify that packages are located in 'src'
     install_requires=[
         'selenium',
         'requests',
@@ -30,5 +31,3 @@ setup(
     ],
     python_requires='>=3.6',
 )
-
-
