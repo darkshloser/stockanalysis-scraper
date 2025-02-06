@@ -18,20 +18,33 @@ base_url = settings['base_url']
 
 
 class StockAnalysis:
+    
+    _instance = None
 
     def __init__(self, headless=True, sendbox=True):
-        try:
-            self.options = webdriver.ChromeOptions()
-            if headless:
-                self.options.add_argument('--headless')
-            if sendbox:
-                self.options.add_argument('--no-sandbox')
-            self.options.add_argument('--disable-dev-shm-usage')
-            self.driver = webdriver.Chrome(
-                service=ChromeService(ChromeDriverManager().install()),
-                options=self.options)
-        except:
-            raise ValueError("Currently only 'Chrome' browser is supported")
+        if not self._initialized:
+            try:
+                self.options = webdriver.ChromeOptions()
+                if headless:
+                    self.options.add_argument('--headless')
+                if sendbox:
+                    self.options.add_argument('--no-sandbox')
+                self.options.add_argument('--disable-dev-shm-usage')
+                self.driver = webdriver.Chrome(
+                    service=ChromeService(ChromeDriverManager().install()),
+                    options=self.options)
+            except:
+                raise ValueError("Currently only 'Chrome' browser is supported")
+
+    def __new__(cls, headless=True, sendbox=True):
+        if cls._instance is None:
+            cls._instance = super(StockAnalysis, cls).__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+
+
+    def _standard_delay(self, time_delay: int = 5):
+        time.sleep(time_delay)
 
     def set_url(self, base_url: str, page: MarketMovers, option=None):
         url = base_url + page.value
@@ -54,7 +67,9 @@ class StockAnalysis:
         return BeautifulSoup(html, 'html.parser')
 
     def close(self):
-        self.driver.quit()
+        if self.driver:
+            self.driver.quit()
+            StockAnalysis._instance = None
 
     def click_button(self, by: By, value: str):
         try:
@@ -62,7 +77,7 @@ class StockAnalysis:
                 EC.element_to_be_clickable((by, value))
             )
             button.click()
-            time.sleep(3)
+            self._standard_delay(3)
             return
         except:
             pass
@@ -76,17 +91,12 @@ class StockAnalysis:
     
     def _extract_table_rows(self):
         try:
-            # Wait until the button container is visible
-            self.click_button(By.CLASS_NAME, 'controls-btn')
-            
-            # Wait until the '50 Rows' button in the dropdown is visible and clickable, then click it
-            self.click_button(By.XPATH, "//button[@title='Show 50 Rows']")
-            time.sleep(10)
+            self._standard_delay()
 
-            # Scrape the rows
+            # Scrape the rows of default table
             page_soup = self.parse_page_content()
             tbody = page_soup.find('tbody')
-            rows = tbody.find_all('tr', class_='svelte-eurwtr')
+            rows = tbody.find_all('tr')
             result = []
             for row in rows:
                 columns = row.find_all('td')
@@ -101,14 +111,9 @@ class StockAnalysis:
         self.set_url(base_url, MarketMovers.PREMARKET, PremarketOptions.GAINERS)
         self.open_url()
         try:
-            result = self._extract_table_rows()
-            self.close()
+            return self._extract_table_rows()
         except:
             raise Exception('Failed to retrieve the data from table with pre-market gainers')
-        
-        return result
-
-
 
     def scrape_premarket_losers(self):
         raise NotImplementedError("This method needs to be implemented.")
@@ -117,15 +122,13 @@ class StockAnalysis:
         self.set_url(base_url, MarketMovers.AFTER_HOURS, AfterHoursOptions.GAINERS)
         self.open_url()
         try:
-            result = self._extract_table_rows()
-            self.close()
+            return self._extract_table_rows()
         except:
             raise Exception('Failed to retrieve the data from table with after hours gainers')
-        
-        return result
     
     def _scrape_news(self, page_soup):
         # Find all divs with the specified class
+        self._standard_delay()
         divs = page_soup.find_all('div', class_='flex flex-col')
         try:
             result = []
@@ -188,6 +191,7 @@ class StockAnalysis:
         return result
     
     def _get_about_data(self, soup):
+        self._standard_delay()
         # Find the <div> elements with class 'grid' and that have six child <div> elements
         grid_divs = soup.find_all('div', class_='grid')
 
@@ -218,19 +222,28 @@ class StockAnalysis:
         self.set_url(base_url, News.MARKETS)
         self.open_url()
         page_soup = self.parse_page_content()
-        return self._scrape_news(page_soup)
+        try:
+            return self._scrape_news(page_soup)
+        except:
+            raise Exception('Failed to retrieve market news')
 
     def scrape_all_stocks_news(self):
         self.set_url(base_url, News.ALL_STOCKS)
         self.open_url()
         page_soup = self.parse_page_content()
-        return self._scrape_news(page_soup)
+        try:
+            return self._scrape_news(page_soup)
+        except:
+            raise Exception('Failed to retrieve news for all stocks')
     
     def scrape_press_release_news(self):
         self.set_url(base_url, News.PRESS_RELEASES)
         self.open_url()
         page_soup = self.parse_page_content()
-        return self._scrape_news(page_soup)
+        try:
+            return self._scrape_news(page_soup)
+        except:
+            raise Exception('Failed to retrieve press release news')
     
     def scrape_stock_data(self, stock_symbol: str):
         """
@@ -265,7 +278,6 @@ class StockAnalysis:
         except Exception as e:
             raise Exception(f"Failed to retrieve data for stock {stock_symbol}: {e}")
         finally:
-            self.close()
             result = {
                 'price': stock_price,
                 'overview': overview_data,
@@ -285,13 +297,6 @@ class StockAnalysis:
         # get current time in format "Aug 15, 2024"
         current_date = datetime.now()
         formatted_date = current_date.strftime("%b %d, %Y")
-
-        # Click on button 'Daily'
-        self.click_button(By.XPATH, "//button[text()='Daily']")
-
-
-        # Select current date 
-        self.click_button(By.XPATH, f"//button[.//div[contains(text(), '{formatted_date}')]]")
 
         # Parse the page content
         page_soup = self.parse_page_content()
